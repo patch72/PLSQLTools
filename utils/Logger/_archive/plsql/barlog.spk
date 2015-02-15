@@ -1,0 +1,313 @@
+/* Formatted on 2008/07/25 09:55 (Formatter Plus v4.7.0) */
+CREATE OR REPLACE PACKAGE barlog
+IS
+  -- Author  : PATRICK_B
+  -- Created : 7/25/2008 9:47:15 AM
+  -- Purpose : Logging
+
+  -- Public type declarations
+--  type <TypeName> is <Datatype>;
+
+  -- Public constant declarations
+--  <ConstantName> constant <Datatype> := <Value>;
+  -- Public variable declarations
+--  <VariableName> <Datatype>;
+
+  -- Public function and procedure declarations
+  procedure TurnLogOn;
+
+  procedure TurnLogOff;
+/*
+  PROCEDURE ADD(
+    date_in                        IN      DATE DEFAULT SYSDATE
+  , message_in                     IN      VARCHAR2
+  , value_date_in                  IN      DATE DEFAULT NULL
+  , value_number_in                IN      NUMBER DEFAULT NULL
+  , value_varchar2_in              IN      VARCHAR2 DEFAULT NULL );
+*/
+  PROCEDURE ADD(
+    message_in                     IN      VARCHAR2 );
+  PROCEDURE ADD(
+    date_in                        IN      DATE
+  , message_in                     IN      VARCHAR2 );
+  PROCEDURE ADD(
+    message_in                     IN      VARCHAR2
+  , value_date_in                  IN      DATE );
+  PROCEDURE ADD(
+    date_in                        IN      DATE
+  , message_in                     IN      VARCHAR2
+  , value_date_in                  IN      DATE );
+  PROCEDURE ADD(
+    message_in                     IN      VARCHAR2
+  , value_number_in                IN      NUMBER );
+  PROCEDURE ADD(
+    date_in                        IN      DATE
+  , message_in                     IN      VARCHAR2
+  , value_number_in                IN      NUMBER );
+  PROCEDURE ADD(
+    message_in                     IN      VARCHAR2
+  , value_varchar2_in              IN      VARCHAR2 );
+  PROCEDURE ADD(
+    date_in                        IN      DATE
+  , message_in                     IN      VARCHAR2
+  , value_varchar2_in              IN      VARCHAR2 );
+
+  procedure show;
+/*
+  PROCEDURE ADD(
+    date_in                        IN      DATE DEFAULT SYSDATE
+  , message_in                     IN      VARCHAR2
+  , value_date_in                  IN      DATE DEFAULT NULL
+  , value_number_in                IN      NUMBER DEFAULT NULL
+  , value_varchar2_in              IN      VARCHAR2 DEFAULT NULL );
+--*/
+END barlog;
+/
+/* Formatted on 2008/07/25 09:55 (Formatter Plus v4.7.0) */
+CREATE OR REPLACE PACKAGE BODY barlog
+IS
+  -- Private type declarations
+--  type <TypeName> is <Datatype>;
+ subtype log_id_t is bar_log.log_id%type;  
+ subtype log_user_t is bar_log.log_user%type;
+ subtype log_date_t is bar_log.log_date%type;    
+ subtype log_message_t is bar_log.log_message%type;   
+ subtype log_value_date_t is bar_log.log_value_date%type;   
+ subtype log_value_number_t is bar_log.log_value_number%type;    
+ subtype log_value_varchar2_t is bar_log.log_value_varchar2%type;  
+ 
+ type log_id_cc is table of log_id_t index by binary_integer;
+ type log_user_cc is table of log_user_t index by binary_integer;
+ type log_date_cc is table of log_date_t index by binary_integer; 
+ type log_message_cc is table of log_message_t index by binary_integer;
+ type log_value_date_cc is table of log_value_date_t index by binary_integer;
+ type log_value_number_cc is table of log_value_number_t index by binary_integer; 
+ type log_value_varchar2_cc is table of log_value_varchar2_t index by binary_integer;
+  -- Private constant declarations
+--  <ConstantName> constant <Datatype> := <Value>;
+  c_maxrows constant pls_integer := 5; -- preserve memory by not making this number too big
+
+  -- Private variable declarations
+--  <VariableName> <Datatype>;
+  fDoLog boolean;
+  -- Function and procedure implementations
+  procedure TurnLogOn
+  is
+  begin
+    fDoLog := true;
+  end TurnLogOn;
+  
+  procedure TurnLogOff
+  is
+  begin
+    fDoLog := false;
+  end TurnLogOff;
+  
+  PROCEDURE initialization
+  IS
+  BEGIN
+--    TurnLogOff;
+    TurnLogOn;
+  END initialization;
+
+  function dolog return boolean
+  is
+  begin
+    return fDoLog;
+  end dolog;
+  
+  PROCEDURE DO_ADD(
+    date_in                        IN      DATE/* DEFAULT SYSDATE*/
+  , user_in                        in      VARCHAR2
+  , message_in                     IN      VARCHAR2
+  , value_date_in                  IN      DATE/* DEFAULT NULL*/
+  , value_number_in                IN      NUMBER/* DEFAULT NULL*/
+  , value_varchar2_in              IN      VARCHAR2/* DEFAULT NULL*/ )
+  IS
+    PRAGMA AUTONOMOUS_TRANSACTION;
+    luser bar_log.log_user%type := user_in;
+  BEGIN
+    if dolog then
+      if (luser is null) then
+        luser := user;
+      end if;
+      INSERT INTO bar_log
+                  ( log_date, log_user, log_message, log_value_date, log_value_number, log_value_varchar2 )
+           VALUES ( date_in, luser, message_in, value_date_in, value_number_in, value_varchar2_in );
+    end if;
+    COMMIT;
+  EXCEPTION
+    WHEN OTHERS THEN
+      DBMS_OUTPUT.PUT_LINE(to_char(sqlcode));
+      DBMS_OUTPUT.PUT_LINE(sqlerrm);
+      ROLLBACK;
+  END DO_ADD;
+  PROCEDURE ADD(
+    message_in                     IN      VARCHAR2 )
+  is
+  begin
+    DO_ADD(date_in => sysdate
+       , user_in => user
+       , message_in => message_in
+       , value_date_in => null
+       , value_number_in => null
+       , value_varchar2_in => null);
+  end add;
+  PROCEDURE ADD(
+    date_in                        IN      DATE
+  , message_in                     IN      VARCHAR2 )
+  is
+  begin
+    DO_ADD(date_in => date_in
+       , user_in => user
+       , message_in => message_in
+       , value_date_in => null
+       , value_number_in => null
+       , value_varchar2_in => null);
+  end add;
+  PROCEDURE ADD(
+    message_in                     IN      VARCHAR2
+  , value_date_in                  IN      DATE )
+  is
+  begin
+    DO_ADD(date_in => sysdate
+       , user_in => user
+       , message_in => message_in
+       , value_date_in => value_date_in
+       , value_number_in => null
+       , value_varchar2_in => null);
+  end add;
+  PROCEDURE ADD(
+    date_in                        IN      DATE
+  , message_in                     IN      VARCHAR2
+  , value_date_in                  IN      DATE )
+  is
+  begin
+    DO_ADD(date_in => date_in
+       , user_in => user
+       , message_in => message_in
+       , value_date_in => value_date_in
+       , value_number_in => null
+       , value_varchar2_in => null);
+  end add;
+  PROCEDURE ADD(
+    message_in                     IN      VARCHAR2
+  , value_number_in                IN      NUMBER )
+  is
+  begin
+    DO_ADD(date_in => sysdate
+       , user_in => user
+       , message_in => message_in
+       , value_date_in => null
+       , value_number_in => value_number_in
+       , value_varchar2_in => null);
+  end add;
+  PROCEDURE ADD(
+    date_in                        IN      DATE
+  , message_in                     IN      VARCHAR2
+  , value_number_in                IN      NUMBER )
+  is
+  begin
+    DO_ADD(date_in => date_in
+       , user_in => user
+       , message_in => message_in
+       , value_date_in => null
+       , value_number_in => value_number_in
+       , value_varchar2_in => null);
+  end add;
+  PROCEDURE ADD(
+    message_in                     IN      VARCHAR2
+  , value_varchar2_in              IN      VARCHAR2 )
+  is
+  begin
+    DO_ADD(date_in => sysdate
+       , user_in => user
+       , message_in => message_in
+       , value_date_in => null
+       , value_number_in => null
+       , value_varchar2_in => value_varchar2_in);
+  end add;
+  PROCEDURE ADD(
+    date_in                        IN      DATE
+  , message_in                     IN      VARCHAR2
+  , value_varchar2_in              IN      VARCHAR2 )
+  is
+  begin
+    DO_ADD(date_in => date_in
+       , user_in => user
+       , message_in => message_in
+       , value_date_in => null
+       , value_number_in => null
+       , value_varchar2_in => value_varchar2_in);
+  end add;
+  
+  procedure show
+  is
+    cursor logmessages_cur is
+    select log_id
+         , log_user
+         , log_date
+         , log_message
+         , log_value_date
+         , log_value_number
+         , log_value_varchar2
+      from bar_log
+     where 1=1
+         ;    
+ l_log_id log_id_cc;
+ l_log_user log_user_cc;
+ l_log_date log_date_cc;
+ l_log_message log_message_cc;
+ l_log_value_date log_value_date_cc;
+ l_log_value_number log_value_number_cc;
+ l_log_value_varchar2 log_value_varchar2_cc;
+
+
+    
+  begin
+--    -- write the headers
+--          DBMS_OUTPUT.PUT_LINE('Log_id             : '||l_log_id(idx));
+--          DBMS_OUTPUT.PUT_LINE('Log_date           : '||l_log_date(idx));
+--          DBMS_OUTPUT.PUT_LINE('Log_message        : '||l_log_message(idx));
+--          DBMS_OUTPUT.PUT_LINE('Log_value_date     : '||l_log_value_date(idx));
+--          DBMS_OUTPUT.PUT_LINE('Log_value_number   : '||l_log_value_number(idx));
+--          DBMS_OUTPUT.PUT_LINE('Log_value_varchar2 : '||l_log_value_varchar2(idx));
+    -- open the cursor
+    open logmessages_cur;
+    loop
+      -- clear the collections
+      l_log_id.delete;
+      l_log_date.delete;
+      l_log_message.delete;
+      l_log_value_date.delete;
+      l_log_value_number.delete;
+      l_log_value_varchar2.delete;
+      
+      -- fetch data into collections
+      fetch logmessages_cur 
+       bulk collect into l_log_id
+                       , l_log_user
+                       , l_log_date
+                       , l_log_message
+                       , l_log_value_date
+                       , l_log_value_number
+                       , l_log_value_varchar2
+      limit c_maxrows;
+      if l_log_id.count > 0 then
+        for idx in l_log_id.first .. l_log_id.last loop
+          DBMS_OUTPUT.PUT_LINE('Log_id             : '||l_log_id(idx));
+          DBMS_OUTPUT.PUT_LINE('Log_user           : '||l_log_user(idx));
+          DBMS_OUTPUT.PUT_LINE('Log_date           : '||l_log_date(idx));
+          DBMS_OUTPUT.PUT_LINE('Log_message        : '||l_log_message(idx));
+          DBMS_OUTPUT.PUT_LINE('Log_value_date     : '||l_log_value_date(idx));
+          DBMS_OUTPUT.PUT_LINE('Log_value_number   : '||l_log_value_number(idx));
+          DBMS_OUTPUT.PUT_LINE('Log_value_varchar2 : '||l_log_value_varchar2(idx));
+        end loop;
+      end if;
+      exit when l_log_id.count < c_maxrows;
+    end loop;
+  end show;
+BEGIN
+  initialization;
+END barlog;
+/

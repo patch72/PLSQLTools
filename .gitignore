@@ -47,3 +47,5 @@ utils/Semaphores/amis_semaphores.sps
 utils/Semaphores/amis_semaphores.sql
 utils/Semaphores/check_semaphores.sql
 utils/Semaphores/semaphores.zip
+utils/Logger/plsql/logger - Copy.spk
+*.bookmarks
