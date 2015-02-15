@@ -41,3 +41,9 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+utils/Semaphores/synonym_amis_semaphores.sql
+utils/Semaphores/amis_semaphores.spb
+utils/Semaphores/amis_semaphores.sps
+utils/Semaphores/amis_semaphores.sql
+utils/Semaphores/check_semaphores.sql
+utils/Semaphores/semaphores.zip
