@@ -1,0 +1,182 @@
+/* Formatted on 2009/02/24 12:50 (Formatter Plus v4.7.0) */
+CREATE OR REPLACE PACKAGE BODY semaphores IS
+  -- Private type declarations
+  -- The type to index the AA by.
+  SUBTYPE semaphore_index_t IS VARCHAR2(100);
+  -- The AA of semaphores
+  TYPE semaphore_ct IS TABLE OF semaphore_t INDEX BY semaphore_index_t;
+
+  -- Private constant declarations
+
+  -- Private variable declarations
+  -- The variable to hold the collection of semaphores
+  g_semaphores semaphore_ct;
+  -- The variable to hold the internal name if no name is specified.
+  g_internalname semaphore_index_t;
+  -- Function and procedure implementations
+  /******************************************************************************\
+  || procedure   : initialization
+  || parameters  : 
+  ||               
+  || purpose     : Initialize the package variables. This runs when the package is
+  ||               first loaded.
+  ||               
+  || author      : Patrick Barel
+  || created     : 2/25/2009
+  || © 2009-2014 : Bar Solutions
+  \******************************************************************************/
+  PROCEDURE initialization IS
+  BEGIN
+    -- empty the entire collection
+    g_semaphores.delete;
+  END initialization;
+
+  FUNCTION getinternalname RETURN semaphore_index_t IS
+    l_returnvalue semaphore_index_t;
+  BEGIN
+    IF g_internalname IS NULL THEN
+      g_internalname := sys_guid; -- generate a name based on a GUID
+    END IF;
+    -- return the current internal name
+    l_returnvalue := g_internalname;
+    RETURN l_returnvalue;
+  END getinternalname;
+  /******************************************************************************\
+  || procedure   : tryaaitem
+  || parameters  : semaphorename_in               IN      VARCHAR2
+  ||               
+  || purpose     : try to get the value from a semaphore item. If this fails, then
+  ||               the item doesn't exist and it should be created.
+  ||               
+  || author      : Patrick Barel
+  || created     : 2/25/2009
+  || © 2009-2014 : Bar Solutions
+  \******************************************************************************/
+  PROCEDURE tryaaitem(semaphorename_in IN VARCHAR2) IS
+    ldummy semaphore_t;
+  BEGIN
+    BEGIN
+      -- try to get the value from the global
+      -- just to mimic a try..except..end construction
+      ldummy := g_semaphores(semaphorename_in);
+    EXCEPTION
+      WHEN no_data_found THEN
+        -- if it doesn't exist, then create it
+        g_semaphores(semaphorename_in) := NULL;
+      WHEN OTHERS THEN
+        RAISE;
+    END;
+  END tryaaitem;
+  /******************************************************************************\
+  || procedure   : inc
+  || parameters  : value_inout                 IN OUT  PLS_INTEGER
+  ||               
+  || purpose     : Increase value_inout by 1
+  ||               
+  || author      : Patrick Barel
+  || created     : 2/24/2009
+  || © 2009-2014 : Bar Solutions
+  \******************************************************************************/
+  PROCEDURE inc(value_inout IN OUT PLS_INTEGER) IS
+  BEGIN
+    -- add 1 to the value sent in.
+    value_inout := nvl(value_inout, 0) + 1;
+  END inc;
+
+  /******************************************************************************\
+  || procedure   : dec
+  || parameters  : value_inout                 IN OUT  PLS_INTEGER
+  ||               
+  || purpose     : Decrease value_inout by 1
+  ||               
+  || author      : Patrick Barel
+  || created     : 2/24/2009
+  || © 2009-2014 : Bar Solutions
+  \******************************************************************************/
+  PROCEDURE DEC(value_inout IN OUT PLS_INTEGER) IS
+  BEGIN
+    -- subtract 1 from the value sent in.
+    value_inout := nvl(value_inout, 0) - 1;
+  END DEC;
+
+  /******************************************************************************\
+  || function    : issemaphoreset
+  || parameters  : semaphorename_in               IN      VARCHAR2
+  ||               
+  || purpose     : Check if a semaphore by the name of semaphorename_in is set
+  ||               
+  || author      : Patrick Barel
+  || created     : 2/24/2009
+  || © 2009-2014 : Bar Solutions
+  \******************************************************************************/
+  FUNCTION issemaphoreset(semaphorename_in IN VARCHAR2) RETURN BOOLEAN IS
+    l_returnvalue   BOOLEAN;
+    l_semaphorename semaphore_index_t;
+  BEGIN
+    -- if a null value is given, then create a guid, or use the last one
+    l_semaphorename := nvl(semaphorename_in, getinternalname);
+    BEGIN
+      -- The semaphore is sent when its value is greater than 0
+      l_returnvalue := (g_semaphores(l_semaphorename) > 0);
+    EXCEPTION
+      WHEN OTHERS THEN
+        l_returnvalue := FALSE;
+    END;
+  
+    RETURN l_returnvalue;
+  END issemaphoreset;
+
+  /******************************************************************************\
+  || procedure   : setsemaphore
+  || parameters  : semaphorename_in               IN      VARCHAR2
+  ||               
+  || purpose     : set a semaphore by the name of semaphore_in, i.e. increase
+  ||               it's number by 1
+  ||               
+  || author      : Patrick Barel
+  || created     : 2/24/2009
+  || © 2009-2014 : Bar Solutions
+  \******************************************************************************/
+  PROCEDURE setsemaphore(semaphorename_in IN VARCHAR2) IS
+    l_semaphorename semaphore_index_t;
+  BEGIN
+    -- if a null value is given, then create a guid, or use the last one
+    l_semaphorename := nvl(semaphorename_in, getinternalname);
+    -- try to find the semaphore, if it doesn't exist then have it created.
+    tryaaitem(semaphorename_in => l_semaphorename);
+    -- increase the value by 1 indicating it is set (again)
+    inc(g_semaphores(l_semaphorename));
+  END setsemaphore;
+
+  /******************************************************************************\
+  || procedure   : clrsemaphore
+  || parameters  : semaphorename_in               IN      VARCHAR2
+  ||               
+  || purpose     : clear a semaphore by the name of semaphore_in, i.e. decrease
+  ||               it's number by 1
+  ||               
+  || author      : Patrick Barel
+  || created     : 2/24/2009
+  || © 2009-2014 : Bar Solutions
+  \******************************************************************************/
+  PROCEDURE clrsemaphore(semaphorename_in IN VARCHAR2) IS
+    l_semaphorename semaphore_index_t;
+  BEGIN
+    -- if a null value is given, then create a guid, or use the last one
+    l_semaphorename := nvl(semaphorename_in, getinternalname);
+    -- try to find the semaphore, if it doesn't exist then have it created.
+    tryaaitem(semaphorename_in => l_semaphorename);
+    -- decrease the value by 1 indicating it is cleared (again)
+    DEC(g_semaphores(l_semaphorename));
+    -- make sure the semaphore never becomes a negative number
+    g_semaphores(l_semaphorename) := greatest(g_semaphores(l_semaphorename), 0);
+    -- remove if the semaphore is 0 i.e. cleared
+    IF g_semaphores(l_semaphorename) = 0 THEN
+      -- remove the semaphore from the AA
+      g_semaphores.delete(l_semaphorename);
+    END IF;
+  END clrsemaphore;
+BEGIN
+  initialization;
+END semaphores;
+/
