@@ -49,3 +49,10 @@ utils/Semaphores/check_semaphores.sql
 utils/Semaphores/semaphores.zip
 utils/Logger/plsql/logger - Copy.spk
 *.bookmarks
+*.png
+*.zip
+utils/Timer/_archive/timer.pkb
+utils/Timer/_archive/timer.spb
+utils/Timer/_archive/timer.pks
+utils/Timer/_archive/timer.spk
+utils/Timer/_archive/timer.sps
